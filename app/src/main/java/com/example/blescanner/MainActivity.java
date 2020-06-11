@@ -416,7 +416,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 httpURLConnection.setRequestProperty("Accept", "application/json");
 
                 httpURLConnection.setDoOutput(true);
-
+   
                 DataOutputStream wr = new DataOutputStream(httpURLConnection.getOutputStream());
                 wr.writeBytes("PostData=" + params[1]);
                 wr.flush();
