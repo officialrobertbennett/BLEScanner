@@ -1,5 +1,7 @@
 package com.example.blescanner;
 
+import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Context;
@@ -8,10 +10,12 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 //import android.support.v7.app.AppCompatActivity; commented this
 import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AppCompatActivity; //added this
+import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -19,11 +23,31 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.Toast;
 
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-    public class MainActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemClickListener {
+import static android.R.layout.simple_spinner_item;
+
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemClickListener {
         private final static String TAG = com.example.blescanner.MainActivity.class.getSimpleName();
 
     public static final int REQUEST_ENABLE_BT = 1;
@@ -35,20 +59,32 @@ import java.util.HashMap;
     private ListView listView;
 
     private Button btn_Scan;
+    private Button btn_Send;
 
     private BroadcastReceiver_BTState mBTStateUpdateReceiver;
     private Scanner_BTLE mBTLeScanner;
+
+    //URL for locations table API
+    private String URLstring = "https://utech-asset-tracker.herokuapp.com/api/locations";
+    private static ProgressDialog mProgressDialog;
+    private ArrayList<ModelData> goodModelArrayList;
+    private ArrayList<String> names = new ArrayList<String>();
+    private Spinner spinner;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //assigning the location spinner element to the variable
+        spinner = findViewById(R.id.location_spinner);
+        retrieveJSON();
 
 
-
-
-        ////
+        //   SPINNER
+        /*
+        ////     SPINNER///////
 
         Spinner mySpinner = (Spinner) findViewById(R.id.location_spinner);
 
@@ -75,7 +111,7 @@ import java.util.HashMap;
 
         /////////
 
-
+        */
 
 
 
@@ -102,9 +138,136 @@ import java.util.HashMap;
         btn_Scan = (Button) findViewById(R.id.btn_scan);
         ((ScrollView) findViewById(R.id.scrollView)).addView(listView);
         findViewById(R.id.btn_scan).setOnClickListener(this);
+
+        btn_Send = (Button) findViewById(R.id.btn_send_to_database);
+        //((ScrollView) findViewById(R.id.scrollView)).addView(listView);
+        //findViewById(R.id.btn_send_to_database).setOnClickListener(this);
+
+        btn_Send.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                JSONObject postData = new JSONObject();
+                try {
+                    //postData.put("becaon_uuid", name.getText().toString());
+                    //postData.put("location_id", address.getText().toString());
+
+                    //postData.put("becaon_uuid", mBTDevicesArrayList.toString());
+                    //postData.put("location_id", mBTDevicesArrayList.[0].getText().toString());
+
+                    postData.put("becaon_uuid", "113:A5:43:32");
+                    postData.put("location_id", 1);
+
+                    //mBTDevicesArrayList
+
+                    new SendBeaconDetails().execute("https://utech-asset-tracker.herokuapp.com/api/beacon/update", postData.toString());
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
     }
 
-    @Override
+    //method to fetch JSON asset locations
+    private void retrieveJSON() {
+
+        showSimpleProgressDialog(this, "Loading...","Fetching Asset Locations",true);
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, URLstring,
+                new Response.Listener<String>() {
+                    @Override
+                    public void onResponse(String response) {
+
+                        Log.d("strrrrr", ">>" + response);
+
+                        try {
+
+                            JSONObject obj = new JSONObject(response);
+
+                            goodModelArrayList = new ArrayList<>();
+                            JSONArray dataArray  = obj.getJSONArray("data");
+
+                            for (int i = 0; i < dataArray.length(); i++) {
+
+                                ModelData playerModel = new ModelData();
+                                JSONObject dataobj = dataArray.getJSONObject(i);
+
+                                playerModel.setLocation_id(dataobj.getInt("location_id"));
+                                playerModel.setName(dataobj.getString("name"));
+
+                                goodModelArrayList.add(playerModel);
+
+                            }
+
+                            for (int i = 0; i < goodModelArrayList.size(); i++){
+                                names.add(goodModelArrayList.get(i).getName().toString());
+                            }
+
+                            ArrayAdapter<String> spinnerArrayAdapter = new ArrayAdapter<String>(MainActivity.this, simple_spinner_item, names);
+                            spinnerArrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item); // The drop down view
+                            spinner.setAdapter(spinnerArrayAdapter);
+                            removeSimpleProgressDialog();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        //displaying the error in toast if occurrs
+                        Toast.makeText(getApplicationContext(), error.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+
+        // request queue
+        RequestQueue requestQueue = Volley.newRequestQueue(this);
+
+        requestQueue.add(stringRequest);
+
+
+    }
+
+    public static void removeSimpleProgressDialog() {
+        try {
+            if (mProgressDialog != null) {
+                if (mProgressDialog.isShowing()) {
+                    mProgressDialog.dismiss();
+                    mProgressDialog = null;
+                }
+            }
+        } catch (IllegalArgumentException ie) {
+            ie.printStackTrace();
+
+        } catch (RuntimeException re) {
+            re.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public static void showSimpleProgressDialog(Context context, String title,
+                                                String msg, boolean isCancelable) {
+        try {
+            if (mProgressDialog == null) {
+                mProgressDialog = ProgressDialog.show(context, title, msg);
+                mProgressDialog.setCancelable(isCancelable);
+            }
+
+            if (!mProgressDialog.isShowing()) {
+                mProgressDialog.show();
+            }
+
+        } catch (IllegalArgumentException ie) {
+            ie.printStackTrace();
+        } catch (RuntimeException re) {
+            re.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+        @Override
     protected void onStart() {
         super.onStart();
 
@@ -229,4 +392,64 @@ import java.util.HashMap;
 
         mBTLeScanner.stop();
     }
+
+    public void sendResultsToDatabase(){
+        btn_Send.setText("Sending Results to Database...");
+
+    }
+
+    private class SendBeaconDetails extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... params) {
+
+            String data = "";
+
+            HttpURLConnection httpURLConnection = null;
+            try {
+
+                httpURLConnection = (HttpURLConnection) new URL(params[0]).openConnection();
+                httpURLConnection.setRequestMethod("POST");
+
+                httpURLConnection.setDoOutput(true);
+
+                DataOutputStream wr = new DataOutputStream(httpURLConnection.getOutputStream());
+                wr.writeBytes("PostData=" + params[1]);
+                wr.flush();
+                wr.close();
+
+                InputStream in = httpURLConnection.getInputStream();
+                InputStreamReader inputStreamReader = new InputStreamReader(in);
+
+                int inputStreamData = inputStreamReader.read();
+                while (inputStreamData != -1) {
+                    char current = (char) inputStreamData;
+                    inputStreamData = inputStreamReader.read();
+                    data += current;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                if (httpURLConnection != null) {
+                    httpURLConnection.disconnect();
+                }
+            }
+
+            return data;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            Log.e("TAG", result); // this is expecting a response code to be sent from your server upon receiving the POST data
+        }
+    }
+
+
+
+
+
+
 }
+
+
