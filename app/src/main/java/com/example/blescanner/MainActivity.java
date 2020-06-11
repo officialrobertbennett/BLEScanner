@@ -158,7 +158,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                     //mBTDevicesArrayList
 
-                    new SendBeaconDetails().execute("https://utech-asset-tracker.herokuapp.com/api/beacon/update", postData.toString());
+                    new SendBeaconDetails().execute("http://utech-asset-tracker.herokuapp.com/api/beacon/update", postData.toString());
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -409,7 +409,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             try {
 
                 httpURLConnection = (HttpURLConnection) new URL(params[0]).openConnection();
-                httpURLConnection.setRequestMethod("POST");
+                httpURLConnection.setRequestMethod("PUT");
+
+                httpURLConnection.setDoInput(true);
+                httpURLConnection.setRequestProperty("Content-Type", "application/json");
+                httpURLConnection.setRequestProperty("Accept", "application/json");
 
                 httpURLConnection.setDoOutput(true);
 
