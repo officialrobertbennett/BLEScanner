@@ -8,13 +8,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-//import android.support.v7.app.AppCompatActivity; commented this
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.database.MatrixCursor;
+import android.media.audiofx.DynamicsProcessing;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -25,7 +27,7 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
-
+import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -33,22 +35,37 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.TimeUnit;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.RequestBody;
 
 import static android.R.layout.simple_spinner_item;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, AdapterView.OnItemClickListener {
-        private final static String TAG = com.example.blescanner.MainActivity.class.getSimpleName();
+    private final static String TAG = com.example.blescanner.MainActivity.class.getSimpleName();
 
     public static final int REQUEST_ENABLE_BT = 1;
     public static final int BTLE_SERVICES = 2;
@@ -79,42 +96,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         //assigning the location spinner element to the variable
         spinner = findViewById(R.id.location_spinner);
+
         retrieveJSON();
-
-
-        //   SPINNER
-        /*
-        ////     SPINNER///////
-
-        Spinner mySpinner = (Spinner) findViewById(R.id.location_spinner);
-
-        ArrayAdapter<String> myAdapter = new ArrayAdapter<String>(MainActivity.this,
-                android.R.layout.simple_list_item_1, getResources().getStringArray(R.array.names));
-        myAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        mySpinner.setAdapter(myAdapter);
-
-        mySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
-                if (i == 1) {
-                    //startActivity(new Intent(MainActivity.this, FirstFragment.class));
-                } else if (i == 2) {
-                    //startActivity(new Intent(MainActivity.this, SecondFragment.class));
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> adapterView) {
-
-            }
-        });
-
-        /////////
-
-        */
-
-
-
 
         // Use this check to determine whether BLE is supported on the device. Then
         // you can selectively disable BLE-related features.
@@ -140,37 +123,115 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         findViewById(R.id.btn_scan).setOnClickListener(this);
 
         btn_Send = (Button) findViewById(R.id.btn_send_to_database);
-        //((ScrollView) findViewById(R.id.scrollView)).addView(listView);
-        //findViewById(R.id.btn_send_to_database).setOnClickListener(this);
 
         btn_Send.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                JSONObject postData = new JSONObject();
                 try {
-                    //postData.put("becaon_uuid", name.getText().toString());
-                    //postData.put("location_id", address.getText().toString());
-
-                    //postData.put("becaon_uuid", mBTDevicesArrayList.toString());
-                    //postData.put("location_id", mBTDevicesArrayList.[0].getText().toString());
-
-                    postData.put("becaon_uuid", "113:A5:43:32");
-                    postData.put("location_id", 1);
-
-                    //mBTDevicesArrayList
-
-                    new SendBeaconDetails().execute("http://utech-asset-tracker.herokuapp.com/api/beacon/update", postData.toString());
+                    updateBeaconsLocation();
                 } catch (JSONException e) {
                     e.printStackTrace();
+                    Toast.makeText(MainActivity.this.getApplicationContext(), "Failed to update locations", Integer.parseInt("2000")).show();
                 }
             }
         });
 
     }
 
+    private void updateBeaconsLocation() throws JSONException {
+        // calls function that send the data to API
+        sendRequest(formatDataToJSON());
+    }
+
+    private JSONObject formatDataToJSON() throws JSONException {
+
+        // JSON array which ALL object (beacon_uuid & location_id) from your array list
+        JSONArray beaconsArray = new JSONArray();
+
+        JSONObject currentData = new JSONObject(); // will hold data from each object inside the loop iteration
+        ArrayList<String> beacon_addresses = new ArrayList<String>();
+
+        //looping through the scanned devices and selecting the UUIDs
+        for (int i = 0; i < mBTDevicesArrayList.size(); i++) {
+            beacon_addresses.add(mBTDevicesArrayList.get(i).getAddress());
+        }
+        //getting the current/selected location_id of the dropdown/spinner
+        int spinner_location_id = (int) (spinner.getSelectedItemId() + 1);  // + 1 because it started counting from 0
+
+        //loop through all the beacon UUIDs and add them to the JSON object
+        for (int i = 0; i < beacon_addresses.size(); i++){
+            JSONObject JSONloopObj = new JSONObject();
+            JSONloopObj.put("beacon_uuid", beacon_addresses.get(i));
+            JSONloopObj.put("location_id", spinner_location_id);
+            beaconsArray.put(JSONloopObj);
+        }
+
+        //CURRENT DATA ISNT NECESSASRY BECAUSE THAT ONLY TRANSFER 1 SET OF VALUES AND NOT ALL. IT ONLY SENDS THE LAST
+            //DETECTED UUID AND NOT ALL
+        //currentData.put("beacon_uuid", beacon_addresses.toString());
+        //currentData.put("location_id", spinner_location_id);
+
+        //currentData.put("beacon_uuid", "4A:F3:41:50:E4:F9"); //hardcode for testing
+        //currentData.put("location_id", 1); //hardcode for testing
+
+        JSONObject beaconsObj = new JSONObject();
+
+        Log.d("JSON Beacons Array Data",beaconsArray.toString());//to be removed
+
+        JSONObject abc = beaconsObj.put("beacons", beaconsArray); //to be removed
+        Log.d("JSON Becaons Object",abc.toString()); //to be removed
+        //return abc; //to be removed
+
+        return beaconsObj.put("beacons", beaconsArray);
+    }
+
+    private void sendRequest(JSONObject data) {
+        String url = "http://utech-asset-tracker.herokuapp.com/api/beacon/update";
+
+        // sets content type
+        MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+
+        //preparing and making the HTTP request
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .writeTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
+                .build();
+
+        RequestBody body = RequestBody.create(JSON, String.valueOf(data)); // formats data for sending
+        //RequestBody body = RequestBody.create(String.valueOf(data), JSON); // formats data for sending
+        okhttp3.Request request = new okhttp3.Request.Builder()
+                .url(url)
+                .put(body)
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                Log.d("fail", "fail");
+                Toast.makeText(MainActivity.this.getApplicationContext(), "Failed to update locations", Integer.parseInt("2000")).show();
+                e.printStackTrace();
+            }
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull okhttp3.Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    Log.d("Is Success " , "Success");
+                    Log.d("Is Success " , response.body().string());
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(MainActivity.this.getApplicationContext(), "Succesfully Updated", Integer.parseInt("2000")).show();
+                        }
+                    });
+                }
+            }
+
+        });
+    }
+
+
     //method to fetch JSON asset locations
     private void retrieveJSON() {
-
-        showSimpleProgressDialog(this, "Loading...","Fetching Asset Locations",true);
+        //showSimpleProgressDialog(this, "Loading...","Fetching Asset Locations",true);
 
         StringRequest stringRequest = new StringRequest(Request.Method.GET, URLstring,
                 new Response.Listener<String>() {
@@ -178,13 +239,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     public void onResponse(String response) {
 
                         Log.d("strrrrr", ">>" + response);
-
                         try {
-
                             JSONObject obj = new JSONObject(response);
 
                             goodModelArrayList = new ArrayList<>();
-                            JSONArray dataArray  = obj.getJSONArray("data");
+                            JSONArray dataArray = obj.getJSONArray("data");
 
                             for (int i = 0; i < dataArray.length(); i++) {
 
@@ -195,10 +254,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 playerModel.setName(dataobj.getString("name"));
 
                                 goodModelArrayList.add(playerModel);
-
                             }
 
-                            for (int i = 0; i < goodModelArrayList.size(); i++){
+                            for (int i = 0; i < goodModelArrayList.size(); i++) {
                                 names.add(goodModelArrayList.get(i).getName().toString());
                             }
 
@@ -223,8 +281,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         RequestQueue requestQueue = Volley.newRequestQueue(this);
 
         requestQueue.add(stringRequest);
-
-
     }
 
     public static void removeSimpleProgressDialog() {
@@ -250,8 +306,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                 String msg, boolean isCancelable) {
         try {
             if (mProgressDialog == null) {
-                mProgressDialog = ProgressDialog.show(context, title, msg);
-                mProgressDialog.setCancelable(isCancelable);
+//                mProgressDialog = ProgressDialog.show(context, title, msg);
+//                mProgressDialog.setCancelable(isCancelable);
             }
 
             if (!mProgressDialog.isShowing()) {
@@ -267,7 +323,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-        @Override
+    @Override
     protected void onStart() {
         super.onStart();
 
@@ -308,6 +364,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // Check which request we're responding to
 
         //super.onActivityResult(requestCode, resultCode, data);
+        super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_ENABLE_BT) {
             // Make sure the request was successful
             if (resultCode == RESULT_OK) {
@@ -349,8 +406,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 if (!mBTLeScanner.isScanning()) {
                     startScan();
-                }
-                else {
+                } else {
                     stopScan();
                 }
 
@@ -370,15 +426,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             mBTDevicesHashMap.put(address, btleDevice);
             mBTDevicesArrayList.add(btleDevice);
-        }
-        else {
+        } else {
             mBTDevicesHashMap.get(address).setRSSI(rssi);
         }
 
         adapter.notifyDataSetChanged();
     }
 
-    public void startScan(){
+    public void startScan() {
         btn_Scan.setText("Scanning...");
 
         mBTDevicesArrayList.clear();
@@ -393,67 +448,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mBTLeScanner.stop();
     }
 
-    public void sendResultsToDatabase(){
+    public void sendResultsToDatabase() {
         btn_Send.setText("Sending Results to Database...");
 
     }
-
-    private class SendBeaconDetails extends AsyncTask<String, Void, String> {
-
-        @Override
-        protected String doInBackground(String... params) {
-
-            String data = "";
-
-            HttpURLConnection httpURLConnection = null;
-            try {
-
-                httpURLConnection = (HttpURLConnection) new URL(params[0]).openConnection();
-                httpURLConnection.setRequestMethod("PUT");
-
-                httpURLConnection.setDoInput(true);
-                httpURLConnection.setRequestProperty("Content-Type", "application/json");
-                httpURLConnection.setRequestProperty("Accept", "application/json");
-
-                httpURLConnection.setDoOutput(true);
-   
-                DataOutputStream wr = new DataOutputStream(httpURLConnection.getOutputStream());
-                wr.writeBytes("PostData=" + params[1]);
-                wr.flush();
-                wr.close();
-
-                InputStream in = httpURLConnection.getInputStream();
-                InputStreamReader inputStreamReader = new InputStreamReader(in);
-
-                int inputStreamData = inputStreamReader.read();
-                while (inputStreamData != -1) {
-                    char current = (char) inputStreamData;
-                    inputStreamData = inputStreamReader.read();
-                    data += current;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (httpURLConnection != null) {
-                    httpURLConnection.disconnect();
-                }
-            }
-
-            return data;
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            super.onPostExecute(result);
-            Log.e("TAG", result); // this is expecting a response code to be sent from your server upon receiving the POST data
-        }
-    }
-
-
-
-
-
-
 }
 
 
