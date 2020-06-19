@@ -381,7 +381,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         Context context = view.getContext();
 
-//        Utils.toast(context, "List Item clicked");
+//      Utils.toast(context, "List Item clicked");
 
         // do something with the text views and start the next activity.
 
