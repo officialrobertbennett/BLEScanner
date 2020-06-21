@@ -7,8 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
-//import android.support.v7.app.AppCompatActivity; commented this
-import androidx.appcompat.app.AppCompatActivity;  //added this
+import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -22,8 +21,8 @@ import java.util.List;
 public class Activity_BTLE_Services extends AppCompatActivity implements ExpandableListView.OnChildClickListener {
     private final static String TAG = Activity_BTLE_Services.class.getSimpleName();
 
-    public static final String EXTRA_NAME = "android.aviles.bletutorial.Activity_BTLE_Services.NAME";
-    public static final String EXTRA_ADDRESS = "android.aviles.bletutorial.Activity_BTLE_Services.ADDRESS";
+    public static final String EXTRA_NAME = "com.example.blescanner.Activity_BTLE_Services.NAME";
+    public static final String EXTRA_ADDRESS = "com.example.blescanner.Activity_BTLE_Services.ADDRESS";
 
     private ListAdapter_BTLE_Services expandableListAdapter;
     private ExpandableListView expandableListView;

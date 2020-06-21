@@ -9,9 +9,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.widget.EditText;
 
-/**
- * Created by Kelvin on 5/9/16.
- */
 public class Dialog_BTLE_Characteristic extends DialogFragment implements DialogInterface.OnClickListener {
 
     private String title;

@@ -9,9 +9,6 @@ import android.content.IntentFilter;
 import android.view.Gravity;
 import android.widget.Toast;
 
-/**
- * Created by Kelvin on 5/8/16.
- */
 public class Utils {
 
     public static boolean checkBluetooth(BluetoothAdapter bluetoothAdapter) {

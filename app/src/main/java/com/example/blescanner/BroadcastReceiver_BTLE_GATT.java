@@ -4,9 +4,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-/**
- * Created by Kelvin on 5/8/16.
- */
 public class BroadcastReceiver_BTLE_GATT extends BroadcastReceiver {
 
     private boolean mConnected = false;

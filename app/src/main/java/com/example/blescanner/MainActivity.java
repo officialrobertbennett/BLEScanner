@@ -1,6 +1,5 @@
 package com.example.blescanner;
 
-import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -8,26 +7,27 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import androidx.annotation.RequiresApi;
+
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
-import android.database.MatrixCursor;
-import android.media.audiofx.DynamicsProcessing;
-import android.os.AsyncTask;
-import android.os.Build;
+import android.graphics.Color;
 import android.os.Bundle;
-import android.text.TextUtils;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import com.android.volley.AuthFailureError;
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
@@ -40,18 +40,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.TimeUnit;
@@ -134,12 +123,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
             }
         });
-
     }
 
     private void updateBeaconsLocation() throws JSONException {
         // calls function that send the data to API
+
         sendRequest(formatDataToJSON());
+
+
     }
 
     private JSONObject formatDataToJSON() throws JSONException {
@@ -165,14 +156,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             beaconsArray.put(JSONloopObj);
         }
 
-        //CURRENT DATA ISNT NECESSASRY BECAUSE THAT ONLY TRANSFER 1 SET OF VALUES AND NOT ALL. IT ONLY SENDS THE LAST
-            //DETECTED UUID AND NOT ALL
-        //currentData.put("beacon_uuid", beacon_addresses.toString());
-        //currentData.put("location_id", spinner_location_id);
-
-        //currentData.put("beacon_uuid", "4A:F3:41:50:E4:F9"); //hardcode for testing
-        //currentData.put("location_id", 1); //hardcode for testing
-
         JSONObject beaconsObj = new JSONObject();
 
         Log.d("JSON Beacons Array Data",beaconsArray.toString());//to be removed
@@ -180,6 +163,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         JSONObject abc = beaconsObj.put("beacons", beaconsArray); //to be removed
         Log.d("JSON Becaons Object",abc.toString()); //to be removed
         //return abc; //to be removed
+
 
         return beaconsObj.put("beacons", beaconsArray);
     }
@@ -231,7 +215,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     //method to fetch JSON asset locations
     private void retrieveJSON() {
-        //showSimpleProgressDialog(this, "Loading...","Fetching Asset Locations",true);
+        showSimpleProgressDialog(this, "Please Wait...","Fetching Asset Locations",false);
 
         StringRequest stringRequest = new StringRequest(Request.Method.GET, URLstring,
                 new Response.Listener<String>() {
@@ -306,8 +290,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                                 String msg, boolean isCancelable) {
         try {
             if (mProgressDialog == null) {
-//                mProgressDialog = ProgressDialog.show(context, title, msg);
-//                mProgressDialog.setCancelable(isCancelable);
+                mProgressDialog = ProgressDialog.show(context, title, msg);
+                mProgressDialog.setCancelable(isCancelable);
             }
 
             if (!mProgressDialog.isShowing()) {
@@ -360,9 +344,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-
         // Check which request we're responding to
-
         //super.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_ENABLE_BT) {
@@ -381,7 +363,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         Context context = view.getContext();
 
-//      Utils.toast(context, "List Item clicked");
+        //Utils.toast(context, "List Item clicked");
 
         // do something with the text views and start the next activity.
 
@@ -414,7 +396,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             default:
                 break;
         }
-
     }
 
     public void addDevice(BluetoothDevice device, int rssi) {
@@ -444,13 +425,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     public void stopScan() {
         btn_Scan.setText("Scan Again");
-
         mBTLeScanner.stop();
-    }
-
-    public void sendResultsToDatabase() {
-        btn_Send.setText("Sending Results to Database...");
-
     }
 }
 

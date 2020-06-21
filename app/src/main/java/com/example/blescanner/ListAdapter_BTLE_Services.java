@@ -18,9 +18,6 @@ import org.w3c.dom.Text;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-/**
- * Created by Kelvin on 5/8/16.
- */
 public class ListAdapter_BTLE_Services extends BaseExpandableListAdapter {
 
     private Activity activity;

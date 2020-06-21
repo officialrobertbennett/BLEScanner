@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          xmlns:tools="http://schemas.android.com/tools"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.blescanner">
 
     <uses-permission android:name="android.permission.BLUETOOTH" />
@@ -28,7 +28,6 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:networkSecurityConfig="@xml/network_security_config">
-
 
         <activity android:name="com.example.blescanner.MainActivity">
             <intent-filter>

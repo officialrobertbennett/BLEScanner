@@ -19,9 +19,6 @@ import android.util.Log;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Created by Kelvin on 5/8/16.
- */
 public class Service_BTLE_GATT extends Service {
     /**
      * Service for managing connection and data communication with a GATT server hosted on a
@@ -39,12 +36,12 @@ public class Service_BTLE_GATT extends Service {
     private static final int STATE_CONNECTING = 1;
     private static final int STATE_CONNECTED = 2;
 
-    public final static String ACTION_GATT_CONNECTED = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_GATT_CONNECTED";
-    public final static String ACTION_GATT_DISCONNECTED = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_GATT_DISCONNECTED";
-    public final static String ACTION_GATT_SERVICES_DISCOVERED = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_GATT_SERVICES_DISCOVERED";
-    public final static String ACTION_DATA_AVAILABLE = "android.kaviles.bletutorial.Service_BTLE_GATT.ACTION_DATA_AVAILABLE";
-    public final static String EXTRA_UUID = "android.kaviles.bletutorial.Service_BTLE_GATT.EXTRA_UUID";
-    public final static String EXTRA_DATA = "android.kaviles.bletutorial.Service_BTLE_GATT.EXTRA_DATA";
+    public final static String ACTION_GATT_CONNECTED = "com.example.blescanner.Service_BTLE_GATT.ACTION_GATT_CONNECTED";
+    public final static String ACTION_GATT_DISCONNECTED = "com.example.blescanner.Service_BTLE_GATT.ACTION_GATT_DISCONNECTED";
+    public final static String ACTION_GATT_SERVICES_DISCOVERED = "com.example.blescanner.Service_BTLE_GATT.ACTION_GATT_SERVICES_DISCOVERED";
+    public final static String ACTION_DATA_AVAILABLE = "com.example.blescanner.Service_BTLE_GATT.ACTION_DATA_AVAILABLE";
+    public final static String EXTRA_UUID = "com.example.blescanner.Service_BTLE_GATT.EXTRA_UUID";
+    public final static String EXTRA_DATA = "com.example.blescanner.Service_BTLE_GATT.EXTRA_DATA";
 
 
     // Implements callback methods for GATT events that the app cares about.  For example,
